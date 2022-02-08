@@ -1,5 +1,6 @@
 import { useContext,} from 'react';
 import Head from 'next/head';
+import { useFormik } from 'formik'; 
 import { Box, Button, Checkbox, Container, IconButton, InputAdornment, Link, TextField, Typography } from '@mui/material';
 import NextLink from 'next/link'
 import PhoneInput from 'react-phone-input-2'
@@ -9,39 +10,51 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { Store } from '../utils/Store';
 import axios from 'axios';
-import { useRouter } from 'next/router';
+
 
 const Home = () => {
-  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const [phone, setphone] = useState('');
-  const [password, setPassword] = useState('');
-  const [rememberMe, setrememberMe] = useState(false);
-  const {state, dispatch} = useContext(Store);
+  const [phonenumber, setphonenumber] = useState('');
+  const {dispatch} = useContext(Store);
   const url = 'http://3.135.237.248:5222/v0.0.1/auth/login';
-  
+  const formik = useFormik({
+    initialValues: {
+      password: '',
+      rememberme:false,
+    },
+    validate:values=>{
+      const errors = {}; 
+      if(!values.password){
+        errors.password = 'Required!'
+      } 
+      if(values.password.length < 6){
+        errors.password = 'Hint: minimum of 6 character '
+      }    
+      return errors;
+     }
+  });
+ 
+
   const handleClickShowPassword = () => {
     setShowPassword(!showPassword);
   };
   const handleMouseDownPassword = (event) => {
     event.preventDefault();
   };
-
   const handleSubmit =async(e)=>{
-      e.preventDefault();
-      console.log(phone, password)
-       await axios.post(url, {phoneNumber:phone, password:password}, {
-        headers: {
-        'Content-Type': 'application/json',
-        'cb-client-api-key': '6df22a6a-c971-493f-9161-6ecfc72ddc35'
-         },
+    e.preventDefault();
+    await axios.post(url, {phoneNumber:phonenumber, password:formik.values.password}, {
+      headers: {
+      'Content-Type': 'application/json',
+      'cb-client-api-key': '6df22a6a-c971-493f-9161-6ecfc72ddc35'
+       },
       }).then((response) => {
-         console.log(response.data)
-         dispatch({type:'USER_LOGIN', payload:response.data});
-         router.push('/response')
-        }).catch((error) => {
-        console.log(error)
-    })
+       console.log(response.data)
+       dispatch({type:'USER_LOGIN', payload:data});
+      }).catch((error) => {
+      console.log(error)
+      })  
+
   }
   return (
     <>
@@ -73,20 +86,22 @@ const Home = () => {
             >
               Phone Number
             </Typography>
+            {/* phone input */} 
             <PhoneInput
-                inputProps={{
+                InputProps={{
                   name:'phone',
+                  id:'phone',
                   required: true,
                   autoFocus: true,
                 }}
-                type="text"
+                disableCountryCode='true'
+                value={phonenumber}
+                onChange={(value)=>(setphonenumber(value))}
                 name='phone'
                 country="np"
                 placeholder="Enter Phone Number"
-                value={phone}
-                onChange={(value)=>setphone(value)}
                 containerStyle={{
-                width:"100%"
+                width: "100%"
                 }}
                 inputStyle={{
                   variant:'outlined',
@@ -120,11 +135,14 @@ const Home = () => {
             <TextField
               color="info"
               fullWidth
+              error={Boolean(formik.touched.password && formik.errors.password)}
+              helperText={formik.touched.password && formik.errors.password}
               name="password"
               placeholder="Enter Your Password"
-              onChange={(e)=>setPassword(e.target.value)}
+              onBlur={formik.handleBlur}
+              onChange={formik.handleChange}
               type={showPassword ? 'text' : 'password'}
-              value={password}
+              value={formik.values.password}
               variant="outlined"
               InputProps={{
                 endAdornment:(
@@ -150,9 +168,9 @@ const Home = () => {
             >
               <Box sx={{alignItems: 'center', display: 'flex'}}>
               <Checkbox
-                checked={rememberMe}
+                checked={formik.values.rememberme}
                 name="rememberme"
-                onChange={(e)=>setrememberMe(!rememberMe)}
+                onChange={formik.handleChange}
               />
               <Typography
                 color="text.secondary"
@@ -181,7 +199,6 @@ const Home = () => {
                 fullWidth
                 size="large"
                 type="submit"
-                // onSubmit={submitHandler}
                 variant="contained"
                 // onSubmit={formik.handleSubmit}
               >
